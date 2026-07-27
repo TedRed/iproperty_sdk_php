@@ -1,0 +1,69 @@
+{
+  "success": true,
+  "data": {
+    "landmarks": [
+      {
+        "id": 7,
+        "name": "Patong Beach",
+        "category": "beach",
+        "distance": 420,
+        "entrance_label": "North access",
+        "measured_to": "entrance",
+        "point": [7.89653, 98.29661],
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [98.29542, 7.8912],
+            [98.29618, 7.89488],
+            [98.29704, 7.89903],
+            [98.29761, 7.90284]
+          ]
+        }
+      },
+      {
+        "id": 12,
+        "name": "Blue Canyon Country Club",
+        "category": "golf",
+        "distance": 8340,
+        "entrance_label": null,
+        "measured_to": "edge",
+        "point": [8.13204, 98.31577],
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [98.3108, 8.1289],
+              [98.3211, 8.1287],
+              [98.3216, 8.1359],
+              [98.3103, 8.1361],
+              [98.3108, 8.1289]
+            ]
+          ]
+        }
+      },
+      {
+        "id": 21,
+        "name": "Phuket International Airport",
+        "category": "airport",
+        "distance": 18960,
+        "entrance_label": "Terminal 1",
+        "measured_to": "entrance",
+        "point": [8.11322, 98.31687],
+        "geometry": {
+          "type": "Point",
+          "coordinates": [98.31687, 8.11322]
+        }
+      }
+    ],
+    "places": [
+      { "id": "node/1842003921", "name": "Kata Mama", "category": "restaurant", "distance": 180 },
+      { "id": "node/2201884430", "name": "Big C Mini", "category": "supermarket", "distance": 340 },
+      { "id": "way/118330271", "name": "Kata Beach Clinic", "category": "hospital", "distance": 910 }
+    ]
+  },
+  "meta": {
+    "has_location": true,
+    "radius": 20000,
+    "max_radius": 250000
+  }
+}

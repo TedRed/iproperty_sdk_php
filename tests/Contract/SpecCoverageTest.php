@@ -35,6 +35,7 @@ class SpecCoverageTest extends TestCase
         'GET /v1/properties/search' => 'properties->search() and properties->searchMap()',
         'GET /v1/properties/{id}' => 'properties->get()',
         'GET /v1/properties/{id}/similar' => 'properties->similar()',
+        'GET /v1/properties/{id}/nearby' => 'properties->nearby()',
         'GET /v1/properties/{id}/availability' => 'properties->availability()',
         'GET /v1/properties/{id}/quote' => 'properties->quote()',
         'POST /v1/properties/{id}/enquiries' => 'properties->enquire()',

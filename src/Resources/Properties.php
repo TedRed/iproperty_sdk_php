@@ -80,6 +80,31 @@ final class Properties extends Resource
     }
 
     /**
+     * What surrounds a listing, for the location section of a property page.
+     *
+     * Two lists in one response. `landmarks` are the places the agency mapped
+     * itself, each with a measured distance in metres — to the nearest entrance
+     * when the landmark has one (`measured_to`, `entrance_label`), to the
+     * nearest edge of its shape otherwise. Each carries `point` ([latitude,
+     * longitude], guaranteed to sit on the landmark) for a pin and simplified
+     * GeoJSON `geometry` for the shape itself. `places` are live OpenStreetMap
+     * points of interest, and are null — not an error — when that lookup is
+     * unavailable, so render what you have and drop the section.
+     *
+     * `radius` bounds the landmarks only; the points of interest always cover a
+     * fixed neighbourhood. Pass places => 0 when re-fetching for a new radius
+     * and the call costs one upstream lookup instead of two.
+     *
+     * meta() carries { has_location, radius, max_radius }.
+     *
+     * @param  array<string, mixed>  $query  radius (1000–250000 metres), places (bool)
+     */
+    public function nearby(int $id, array $query = []): ApiResponse
+    {
+        return $this->client->get("/v1/properties/{$id}/nearby", $query);
+    }
+
+    /**
      * Which room types are free for a date range, and what they cost.
      *
      * @param  array<string, mixed>  $query  check_in, check_out (Y-m-d), guests (1–64)

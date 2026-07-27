@@ -1061,6 +1061,101 @@
                 }
             }
         },
+        "/v1/properties/{id}/nearby": {
+            "get": {
+                "operationId": "properties.nearby",
+                "description": "Everything around one of your agency's listings, for the \"Location\"\nsection of a property page: `landmarks` \u2014 the places your agency has\nmapped itself, each with a real measured distance in metres \u2014 and\n`places`, live points of interest from OpenStreetMap.\n\nA landmark's `distance` is measured to its nearest **entrance** when it\nhas one and to the nearest edge of its shape otherwise; `measured_to`\nsays which, and `entrance_label` names the way in. That is the walk\nsomeone can actually make rather than the perpendicular across a cliff.\nEach landmark also carries `point` (`[latitude, longitude]`, guaranteed\nto lie on the landmark) to drop a pin on, and simplified GeoJSON\n`geometry` to draw the beach, park or golf course itself.\n\n`radius` (metres) bounds the **landmarks** only, from the neighbourhood\nout to the region; `meta` echoes the `radius` applied and the\n`max_radius` allowed. Points of interest always cover a fixed\nneighbourhood around the pin, so a radius control over them would be\nmisleading \u2014 pass `places=0` on a radius change to skip re-fetching them.\n\n`places` is `null`, not an error, when the OpenStreetMap lookup is\nunavailable: render the landmarks and omit the section. A listing with no\ncoordinates yields empty lists and `meta.has_location` false.",
+                "summary": "What's nearby",
+                "tags": [
+                    "Properties"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "radius",
+                        "in": "query",
+                        "description": "Landmark search radius in metres. Defaults to 20 km.",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1000,
+                            "maximum": 250000
+                        }
+                    },
+                    {
+                        "name": "places",
+                        "in": "query",
+                        "description": "Include the OpenStreetMap points of interest. On by default.",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "type": "string"
+                                                },
+                                                "meta": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            },
+                                                            "minItems": 0,
+                                                            "maxItems": 0,
+                                                            "additionalItems": false
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data",
+                                                "meta"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/v1/properties/{id}/availability": {
             "get": {
                 "operationId": "properties.availability",

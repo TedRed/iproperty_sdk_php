@@ -19,6 +19,7 @@ class ResourcesTest extends TestCase
             'GET /v1/properties/search' => $this->fixture('properties.search'),
             'GET /v1/properties/11' => $this->fixture('property'),
             'GET /v1/properties/11/similar' => $this->fixture('properties.search'),
+            'GET /v1/properties/11/nearby' => $this->fixture('property.nearby'),
             'GET /v1/properties/11/availability' => $this->fixture('availability'),
             'GET /v1/properties/11/quote' => $this->fixture('quote'),
         ]);
@@ -26,6 +27,7 @@ class ResourcesTest extends TestCase
         $client->properties->search(['q' => 'villa']);
         $client->properties->get(11);
         $client->properties->similar(11);
+        $client->properties->nearby(11);
         $client->properties->availability(11, ['check_in' => '2026-09-01', 'check_out' => '2026-09-04']);
         $client->properties->quote(11, ['check_in' => '2026-09-01', 'check_out' => '2026-09-04', 'id_room_type' => 4]);
 
@@ -33,9 +35,39 @@ class ResourcesTest extends TestCase
             'https://api.example.test/v1/properties/search',
             'https://api.example.test/v1/properties/11',
             'https://api.example.test/v1/properties/11/similar',
+            'https://api.example.test/v1/properties/11/nearby',
             'https://api.example.test/v1/properties/11/availability',
             'https://api.example.test/v1/properties/11/quote',
         ], array_map(fn ($request) => $request->url, $transport->sent()));
+    }
+
+    /**
+     * The two lists fail apart: landmarks are ours, points of interest come
+     * from a third party. A caller must be able to tell "none nearby" from
+     * "we could not ask", which is why places is nullable rather than empty.
+     */
+    public function test_nearby_returns_measured_landmarks_alongside_optional_places(): void
+    {
+        [$client, $transport] = $this->clientWith([
+            'GET /v1/properties/11/nearby' => $this->fixture('property.nearby'),
+        ]);
+
+        $response = $client->properties->nearby(11, ['radius' => 50000, 'places' => 0]);
+        $data = $response->data();
+
+        $beach = $data['landmarks'][0];
+        $this->assertSame(420, $beach['distance']);
+        $this->assertSame('entrance', $beach['measured_to']);
+        $this->assertSame('North access', $beach['entrance_label']);
+        // [latitude, longitude] for a pin, GeoJSON [longitude, latitude] for the shape.
+        $this->assertSame([7.89653, 98.29661], $beach['point']);
+        $this->assertSame('LineString', $beach['geometry']['type']);
+
+        $this->assertSame(250000, $response->meta()['max_radius']);
+
+        $request = $transport->lastRequest();
+        $this->assertSame(50000, $request->query['radius']);
+        $this->assertSame(0, $request->query['places']);
     }
 
     public function test_it_maps_lookups_and_agency_onto_their_endpoints(): void
