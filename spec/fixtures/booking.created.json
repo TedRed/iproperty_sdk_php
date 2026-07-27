@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "id_booking": 555,
+    "status": "pending",
+    "check_in": "2026-09-01",
+    "check_out": "2026-09-04",
+    "nights": 3,
+    "total": 330000,
+    "currency": "USD"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "data": {
+    "id_agency": 1,
+    "name": "Bayfront Estates",
+    "logo": "logo.png",
+    "banner": null,
+    "email": "hello@bayfront.test",
+    "www": "https://bayfront.test",
+    "address1": "12 Harbour Road",
+    "city": "Phuket",
+    "country": "Thailand",
+    "cdn_url": "https://cdn.example.test",
+    "mode": "hybrid"
+  }
+}

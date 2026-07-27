@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "client_secret": "pi_3Abc_secret_xyz",
+    "payment_intent": "pi_3Abc",
+    "stripe_account": "acct_agency123",
+    "publishable_key": "pk_test_platform",
+    "amount": 330000,
+    "currency": "USD",
+    "purpose": "deposit"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "data": {
+    "id_property": 11,
+    "name": "Villa Alpha",
+    "kind": "real_estate",
+    "description": "A calm four-bedroom villa a short walk from the water.",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "sales_price": 45000000,
+    "currency": "THB",
+    "images": [],
+    "room_types": []
+  }
+}

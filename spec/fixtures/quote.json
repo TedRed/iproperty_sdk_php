@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "data": {
+    "id_property": 11,
+    "id_room_type": 4,
+    "units": 1,
+    "check_in": "2026-09-01",
+    "check_out": "2026-09-04",
+    "nights": 3,
+    "net_total": 300000,
+    "gross_total": 330000,
+    "tax_percentage": 10,
+    "currency": "USD"
+  }
+}

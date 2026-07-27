@@ -1,0 +1,16 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id_property": 11,
+      "name": "Villa Alpha",
+      "kind": "real_estate",
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "sales_price": 45000000,
+      "currency": "THB",
+      "images": []
+    }
+  ],
+  "meta": { "total": 1, "page": 1, "per_page": 12, "last_page": 1 }
+}

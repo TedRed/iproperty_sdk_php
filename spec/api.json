@@ -1,0 +1,1238 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "IPropertyPro Public API",
+        "version": "1.0.0",
+        "description": "The IPropertyPro public API. All data is scoped to your agency.\n\n## Authentication\n\nCreate a credential (client ID + secret) in the IPropertyPro dashboard under\n**Agency settings \u2192 Public API**. The secret is shown once at creation. Then either:\n\n**Use the credential directly** (HTTP Basic) on every request:\n\n```bash\ncurl -u \"CLIENT_ID:ipp_sk_YOUR_SECRET\" https://api.ipropertypro.net/v1/me\n```\n\n**Or exchange it for a Bearer token** (OAuth2 client credentials, valid 1 hour):\n\n```bash\ncurl -X POST https://api.ipropertypro.net/oauth/token \\\n  -d grant_type=client_credentials \\\n  -d client_id=CLIENT_ID -d client_secret=ipp_sk_YOUR_SECRET\ncurl -H \"Authorization: Bearer ACCESS_TOKEN\" https://api.ipropertypro.net/v1/me\n```\n\nRequests are rate limited per agency; 429 responses mean back off and retry."
+    },
+    "servers": [
+        {
+            "url": "https://api.ipropertypro.app"
+        }
+    ],
+    "security": [
+        {
+            "clientCredentialsBasic": []
+        },
+        {
+            "oauth2ClientCredentials": []
+        }
+    ],
+    "paths": {
+        "/oauth/token": {
+            "post": {
+                "operationId": "passport.token",
+                "summary": "Issue an access token",
+                "tags": [
+                    "AccessToken"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/agency": {
+            "get": {
+                "operationId": "agency.show",
+                "description": "Returns your agency's public branding \u2014 company name, website, contact\nemail, postal address and logo/banner images. A white-label consumer\nwebsite renders this in its header, footer and contact blocks. No\nsecrets or staff details are included.",
+                "summary": "Get agency profile",
+                "tags": [
+                    "Agency"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/bookings/{id}/payment-schedule": {
+            "get": {
+                "operationId": "bookingPayments.schedule",
+                "description": "The ordered charges on a booking \u2014 deposit, balance, any cancellation fee \u2014\nwith what each is for, when it falls due, its current state, and per-currency\ntotals of what is scheduled, paid and outstanding.\n\nAmounts are integers in the currency's smallest unit (2500 = 25.00 THB; 2500 =\n\u00a52500 for zero-decimal currencies). `chargeable` marks the charges a payment\nsession can be opened for.\n\nReturns 409 if the booking has no schedule \u2014 for example when your agency\ntakes payments with its own Stripe keys rather than through iPropertyPro.\nRequires the `bookings:read` scope when authenticating with a Bearer token.",
+                "summary": "Get a booking's payment schedule",
+                "tags": [
+                    "BookingPayments"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {}
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/bookings/{id}/payments/session": {
+            "post": {
+                "operationId": "bookingPayments.session",
+                "description": "Opens a Stripe PaymentIntent for a charge on the booking (by default the\nearliest one due) and returns what Stripe.js needs to collect the card:\n\n- `client_secret` \u2014 the intent to confirm\n- `stripe_account` \u2014 the connected account it lives on; initialise Stripe.js\n  with `Stripe(publishable_key, { stripeAccount })` or confirmation will fail\n- `publishable_key` \u2014 safe to expose in a browser\n- `amount`, `currency`, `purpose` \u2014 what the guest is paying\n\nThe card is entered in Stripe's own iframe and sent directly to Stripe. It\nnever touches this API, and no card data may be sent to this endpoint.\n\nRe-opening the same charge returns the SAME intent, so a visitor who abandons\nthe form and comes back is not charged twice. Send an `Idempotency-Key` header\nto make a retried request replay its original response.\n\nReturns 409 when there is nothing to pay, when the agency is not set up to take\npayments through iPropertyPro, or when its plan does not include payments.\nRequires the `payments:write` scope when authenticating with a Bearer token.",
+                "summary": "Start a payment",
+                "tags": [
+                    "BookingPayments"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "id_scheduled_charge": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {}
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/properties/{id}/bookings": {
+            "post": {
+                "operationId": "bookings.store",
+                "description": "Creates a \"request to book\" against one of your agency's daily-rental\nlistings from a website visitor. The booking is recorded as pending and the\nprice is re-checked server-side, so a stale or tampered total is rejected\n(409) rather than honoured; get a fresh figure from\n`GET /v1/properties/{id}/quote` first.\n\nNo payment is taken by this endpoint. If your agency takes booking payments\nthrough iPropertyPro, follow up with\n`POST /v1/bookings/{id}/payments/session` to collect the deposit or full\namount; otherwise your team follows up out of band.\n\nSend an `Idempotency-Key` header (any unique string per booking attempt)\nto make a retried/double-submitted request return the original booking\ninstead of creating a duplicate. Requires the `bookings:write` scope when\nauthenticating with a Bearer token.",
+                "summary": "Request a booking",
+                "tags": [
+                    "Bookings"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "check_in": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "check_out": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "id_room_type": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
+                                    "contact": {
+                                        "type": "object",
+                                        "properties": {
+                                            "firstname": {
+                                                "type": "string",
+                                                "maxLength": 120
+                                            },
+                                            "lastname": {
+                                                "type": "string",
+                                                "maxLength": 120
+                                            },
+                                            "email": {
+                                                "type": "string",
+                                                "format": "email",
+                                                "maxLength": 190
+                                            },
+                                            "phone": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 40
+                                            },
+                                            "address1": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 190
+                                            },
+                                            "address2": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 190
+                                            },
+                                            "town": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 120
+                                            },
+                                            "city": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 120
+                                            },
+                                            "state": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 120
+                                            },
+                                            "country": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 120
+                                            },
+                                            "zip": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 20
+                                            }
+                                        },
+                                        "required": [
+                                            "firstname",
+                                            "lastname",
+                                            "email"
+                                        ]
+                                    },
+                                    "guests": {
+                                        "type": [
+                                            "array",
+                                            "null"
+                                        ],
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "firstname": {
+                                                    "type": "string",
+                                                    "maxLength": 120
+                                                },
+                                                "lastname": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "maxLength": 120
+                                                },
+                                                "email": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "format": "email",
+                                                    "maxLength": 190
+                                                },
+                                                "phone": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "maxLength": 40
+                                                }
+                                            }
+                                        },
+                                        "maxItems": 64
+                                    }
+                                },
+                                "required": [
+                                    "check_in",
+                                    "check_out",
+                                    "contact"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/properties/{id}/enquiries": {
+            "post": {
+                "operationId": "enquiries.store",
+                "description": "Records a sales or long-term-rental lead from a website visitor against\none of your agency's listings and notifies the assigned agents. This is\none-way lead capture, not a messaging channel \u2014 there is no read API;\nagents follow up with the visitor directly using the contact details\nsupplied. Requires the `enquiries:write` scope when authenticating with\na Bearer token.",
+                "summary": "Submit a property enquiry",
+                "tags": [
+                    "Enquiries"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 190
+                                    },
+                                    "phone": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 40
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "maxLength": 5000
+                                    },
+                                    "type": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "enum": [
+                                            "sale",
+                                            "rent",
+                                            null
+                                        ]
+                                    },
+                                    "source": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 100
+                                    }
+                                },
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "message"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/property-types": {
+            "get": {
+                "operationId": "lookups.propertyTypes",
+                "description": "Your agency's property types (villa, condo, ...) \u2014 populates the type\nfilter on a search page.",
+                "summary": "List property types",
+                "tags": [
+                    "Lookups"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            },
+                                                            "minItems": 0,
+                                                            "maxItems": 0,
+                                                            "additionalItems": false
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/locations": {
+            "get": {
+                "operationId": "lookups.locations",
+                "description": "Distinct country / state / city / town options present on your agency's\nlive listings \u2014 populates cascading location filters. Grouped under\n`countries`, `states`, `cities`, `towns`.",
+                "summary": "List locations",
+                "tags": [
+                    "Lookups"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            },
+                                                            "minItems": 0,
+                                                            "maxItems": 0,
+                                                            "additionalItems": false
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/me": {
+            "get": {
+                "operationId": "me.show",
+                "description": "Returns the agency and API client your credentials resolve to \u2014 useful\nas a first call to verify authentication is set up correctly.",
+                "summary": "Who am I",
+                "tags": [
+                    "Me"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id_agency": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "agency_name": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "client_id": {},
+                                                "client_name": {
+                                                    "type": "string"
+                                                },
+                                                "auth_method": {
+                                                    "type": "string",
+                                                    "description": "How this request authenticated: `key` (HTTP Basic) or `token` (OAuth Bearer)."
+                                                },
+                                                "scopes": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "id_agency",
+                                                "agency_name",
+                                                "client_id",
+                                                "client_name",
+                                                "auth_method",
+                                                "scopes"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/properties/search": {
+            "get": {
+                "operationId": "properties.search",
+                "description": "Searches your agency's property listings. Results are always scoped to\nthe agency your credentials belong to. Paginated when `page` is given;\n`meta` carries `total`, `page`, `per_page` and `last_page`.",
+                "summary": "Search properties",
+                "tags": [
+                    "Properties"
+                ],
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "relevance",
+                                "name-asc",
+                                "name-desc",
+                                "beds-desc",
+                                "baths-desc",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_country",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_state",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_city",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_town",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "id_property_type",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "zip",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 20
+                        }
+                    },
+                    {
+                        "name": "reference",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 50
+                        }
+                    },
+                    {
+                        "name": "bedrooms",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "bathrooms",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "description": "Narrow to one lane. Filters on the RESOLVED kind, so asking for\n'hotel' also returns properties that merely inherit it from the\nagency's mode rather than pinning it themselves.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "hotel",
+                                "real_estate",
+                                null
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/properties/{id}": {
+            "get": {
+                "operationId": "properties.show",
+                "description": "Returns one of your agency's property listings in full detail:\nlocation, sizes, prices, descriptions, features, rooms, images and the\nlisting agent's contact details.",
+                "summary": "Get a property",
+                "tags": [
+                    "Properties"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/properties/{id}/similar": {
+            "get": {
+                "operationId": "properties.similar",
+                "description": "Up to four of your agency's other listings similar to the given one \u2014\nthe \"you may also like\" rail on a property page.",
+                "summary": "Similar properties",
+                "tags": [
+                    "Properties"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            },
+                                                            "minItems": 0,
+                                                            "maxItems": 0,
+                                                            "additionalItems": false
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/properties/{id}/availability": {
+            "get": {
+                "operationId": "properties.availability",
+                "description": "Returns per-room-type availability for one of your agency's properties\nover a stay: how many units of each room type are free for the whole\ndate range and the gross price for the stay. A single-unit listing\nreports one \"Standard\" room type. Requires `check_in` and `check_out`\n(YYYY-MM-DD); `check_out` must be after `check_in`.",
+                "summary": "Check availability",
+                "tags": [
+                    "Properties"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "check_in",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "check_out",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "guests",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 64
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/v1/properties/{id}/quote": {
+            "get": {
+                "operationId": "properties.quote",
+                "description": "Returns the exact, bookable total for a stay at one of your agency's\ndaily-rental listings. For a multi-room-type (hotel) listing, pass\n`id_room_type` to price a specific room. `check_in`/`check_out` are\nYYYY-MM-DD (`check_out` after `check_in`). The `gross_total` is the\namount a subsequent booking is validated against, so display it verbatim.",
+                "summary": "Quote a stay",
+                "tags": [
+                    "Properties"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "check_in",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "check_out",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "id_room_type",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "data": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            },
+                                                            "minItems": 0,
+                                                            "maxItems": 0,
+                                                            "additionalItems": false
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "clientCredentialsBasic": {
+                "type": "http",
+                "description": "Send your credential directly on every request: the client ID as the username and the secret (`ipp_sk_...`) as the password. Direct key auth grants all scopes. Credentials are created in the IPropertyPro dashboard under Agency settings \u2192 Public API.",
+                "scheme": "basic"
+            },
+            "oauth2ClientCredentials": {
+                "type": "oauth2",
+                "description": "Exchange the same client ID + secret at `/oauth/token` (grant_type=client_credentials) for a Bearer access token valid for one hour.",
+                "flows": {
+                    "clientCredentials": {
+                        "tokenUrl": "https://api.ipropertypro.app/oauth/token",
+                        "scopes": {
+                            "properties:read": "Search and read property listings",
+                            "enquiries:write": "Submit property enquiries",
+                            "bookings:write": "Request bookings for daily-rental listings",
+                            "bookings:read": "Read bookings and their payment schedules",
+                            "payments:write": "Start payments for a booking"
+                        }
+                    }
+                }
+            }
+        },
+        "responses": {
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
