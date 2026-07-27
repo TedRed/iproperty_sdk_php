@@ -21,7 +21,19 @@ final class Properties extends Resource
      * Paginated search. Filters: q, page, per_page (1–100), sort
      * (relevance|name-asc|name-desc|beds-desc|baths-desc), id_country,
      * id_state, id_city, id_town, id_property_type, zip, reference, bedrooms,
-     * bathrooms, kind (hotel|real_estate).
+     * bathrooms, kind (hotel|real_estate), transaction (sale|rent),
+     * min_price, max_price, polygon.
+     *
+     * `transaction` picks the market: 'sale' for listings with an asking
+     * price, 'rent' for a long-term monthly rent. Rows carry that market's
+     * price, currency and price_mode ('monthly' for a rent, null for a sale).
+     * The price bounds measure the same market's price, so they only bite
+     * alongside a transaction.
+     *
+     * `polygon` is a drawn area: a JSON-encoded closed ring of [longitude,
+     * latitude] pairs, at most 100 of them. It filters these paged results as
+     * readily as it filters a map, so an area a visitor drew survives their
+     * switch back to a list.
      *
      * Pagination arrives in meta(): { total, page, per_page, last_page }.
      *
@@ -30,6 +42,30 @@ final class Properties extends Resource
     public function search(array $filters = []): ApiResponse
     {
         return $this->client->get('/v1/properties/search', $filters);
+    }
+
+    /**
+     * The same search, answered as map markers instead of a page.
+     *
+     * Takes every filter search() does. Rows are trimmed to what a pin needs —
+     * id, name, reference, bedrooms, bathrooms, latitude, longitude, a single
+     * `image`, and the transaction's price/currency/price_mode. Listings with
+     * no coordinates cannot be plotted and are absent.
+     *
+     * There are no pages: a map shows an area, not page 3 of it. meta() is
+     * { total, returned, capped, cap }, plus `bounds` ([[south, west],
+     * [north, east]]) and a GeoJSON `boundary` when a location filter has the
+     * geometry to frame the map with. When `capped` is true the area holds
+     * more than `cap` listings and you are seeing `returned` of them — say so,
+     * rather than letting the map imply that is all there is.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function searchMap(array $filters = []): ApiResponse
+    {
+        // Union, not merge: map mode is the whole point of the call, so a
+        // stray map => false in the caller's filters cannot switch it off.
+        return $this->client->get('/v1/properties/search', ['map' => 1] + $filters);
     }
 
     public function get(int $id): ApiResponse

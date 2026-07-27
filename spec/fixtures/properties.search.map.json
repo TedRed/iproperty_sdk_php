@@ -1,0 +1,42 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 11,
+      "name": "Villa Alpha",
+      "reference": "PP-11",
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "latitude": 7.8904,
+      "longitude": 98.2974,
+      "image": { "filename": "villa-alpha.jpg", "device": "S3-AWS", "created_at": "2025-01-14" },
+      "price": 45000000,
+      "currency": "THB",
+      "price_mode": null
+    },
+    {
+      "id": 12,
+      "name": "Seaview Apartment",
+      "reference": "PP-12",
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "latitude": 7.9512,
+      "longitude": 98.2861,
+      "image": null,
+      "price": 65000,
+      "currency": "THB",
+      "price_mode": "monthly"
+    }
+  ],
+  "meta": {
+    "total": 1200,
+    "returned": 1000,
+    "capped": true,
+    "cap": 1000,
+    "bounds": [[7.7, 98.2], [8.2, 98.5]],
+    "boundary": {
+      "type": "Polygon",
+      "coordinates": [[[98.2, 7.7], [98.5, 7.7], [98.5, 8.2], [98.2, 8.2], [98.2, 7.7]]]
+    }
+  }
+}

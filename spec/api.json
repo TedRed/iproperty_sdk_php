@@ -697,7 +697,7 @@
         "/v1/properties/search": {
             "get": {
                 "operationId": "properties.search",
-                "description": "Searches your agency's property listings. Results are always scoped to\nthe agency your credentials belong to. Paginated when `page` is given;\n`meta` carries `total`, `page`, `per_page` and `last_page`.",
+                "description": "Searches your agency's property listings. Results are always scoped to\nthe agency your credentials belong to. Paginated when `page` is given;\n`meta` carries `total`, `page`, `per_page` and `last_page`.\n\nPass `transaction` to search one market \u2014 `sale` for listings with an\nasking price, `rent` for those with a long-term monthly rent. Each row\ncarries the matching `price`, `currency` and `price_mode` (`monthly`\nfor a rent, absent for a sale). `min_price`/`max_price` bound that same\nmarket's price and so require a `transaction` to mean anything.\n\n`polygon` filters to a drawn area \u2014 the shape a \"search this area\" map\ncontrol produces. It applies to the ordinary paged results too, so an\narea drawn on a map survives a switch back to a list.\n\n**Map mode.** With `map=1` the response is a marker payload instead of a\npage: every matching located listing, unpaginated but hard-capped, each\nrow carrying `latitude`, `longitude`, a single `image` and the same\nprice fields \u2014 enough to plot and label a pin, and nothing more.\nListings without coordinates are absent. `meta` becomes\n`{ total, returned, capped, cap }`, plus `bounds` (`[[south, west],\n[north, east]]`) and a GeoJSON `boundary` when a location filter has\ngeometry to frame the map with. `capped` true means `total` exceeded\n`cap` and the map is showing a subset \u2014 say so rather than implying the\narea holds only that many.",
                 "summary": "Search properties",
                 "tags": [
                     "Properties"
@@ -863,6 +863,69 @@
                                 "real_estate",
                                 null
                             ]
+                        }
+                    },
+                    {
+                        "name": "transaction",
+                        "in": "query",
+                        "description": "Which market to search: listings with an asking price, or those\nwith a long-term monthly rent.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "sale",
+                                "rent",
+                                null
+                            ]
+                        }
+                    },
+                    {
+                        "name": "min_price",
+                        "in": "query",
+                        "description": "Lowest price to include, in the listing's own currency. Bounds\nthe price of the chosen `transaction`, so it needs one to mean\nanything.",
+                        "schema": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "max_price",
+                        "in": "query",
+                        "description": "Highest price to include. Valid on its own as an \"up to\" filter.",
+                        "schema": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "map",
+                        "in": "query",
+                        "description": "Return the marker payload for a map instead of a page of results.",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "polygon",
+                        "in": "query",
+                        "description": "Draw-an-area filter: a JSON ring of [longitude, latitude] pairs,\nclosed and at most 100 points long. Narrows the results to\nlistings whose location falls inside the shape.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 8192
                         }
                     }
                 ],

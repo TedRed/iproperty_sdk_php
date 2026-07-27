@@ -32,7 +32,7 @@ class SpecCoverageTest extends TestCase
         'GET /v1/me' => 'agency->me()',
         'GET /v1/property-types' => 'reference->propertyTypes()',
         'GET /v1/locations' => 'reference->locations()',
-        'GET /v1/properties/search' => 'properties->search()',
+        'GET /v1/properties/search' => 'properties->search() and properties->searchMap()',
         'GET /v1/properties/{id}' => 'properties->get()',
         'GET /v1/properties/{id}/similar' => 'properties->similar()',
         'GET /v1/properties/{id}/availability' => 'properties->availability()',
@@ -128,7 +128,14 @@ class SpecCoverageTest extends TestCase
 
         $parameters = array_column($spec['paths']['/v1/properties/search']['get']['parameters'] ?? [], 'name');
 
-        foreach (['q', 'page', 'per_page', 'sort', 'kind', 'id_property_type', 'bedrooms', 'bathrooms'] as $filter) {
+        $advertised = [
+            'q', 'page', 'per_page', 'sort', 'kind', 'id_property_type', 'bedrooms', 'bathrooms',
+            'transaction', 'min_price', 'max_price',
+            // searchMap() is this endpoint too — `map` is what makes it one.
+            'map', 'polygon',
+        ];
+
+        foreach ($advertised as $filter) {
             $this->assertContains($filter, $parameters, "Search no longer accepts [{$filter}].");
         }
     }

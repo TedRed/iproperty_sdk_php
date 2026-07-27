@@ -39,6 +39,45 @@ foreach ($results->data() as $property) {
 echo $results->meta()['total'];
 ```
 
+### Map search
+
+`searchMap()` answers the same filters with map markers instead of a page —
+coordinates, one image and the transaction's price, which is what a pin needs
+and no more. Listings without coordinates cannot be plotted and are absent.
+
+```php
+$map = $client->properties->searchMap(['transaction' => 'sale', 'id_city' => $cityId]);
+
+foreach ($map->data() as $marker) {
+    $pin = [$marker['latitude'], $marker['longitude']];
+}
+```
+
+There are no pages: a map shows an area, not page 3 of it. `meta()` carries
+`total`, `returned`, `capped` and `cap`, plus `bounds` (`[[south, west],
+[north, east]]`) and a GeoJSON `boundary` when a location filter has geometry
+to frame the map with. When `capped` is true, the area holds more than the map
+is showing — tell the visitor so, rather than letting the pins imply that is
+all of them.
+
+```php
+if ($map->meta()['capped']) {
+    $notice = "Showing {$map->meta()['returned']} of {$map->meta()['total']} — zoom in or add a filter.";
+}
+```
+
+To let a visitor draw their own area, pass `polygon`: a JSON-encoded closed ring
+of `[longitude, latitude]` pairs, at most 100 of them. It is an ordinary filter,
+so it narrows `search()` exactly as it narrows `searchMap()` — an area someone
+drew survives their switch back to a list.
+
+```php
+$ring = json_encode([[98.29, 7.88], [98.31, 7.88], [98.31, 7.90], [98.29, 7.90], [98.29, 7.88]]);
+
+$client->properties->searchMap(['polygon' => $ring]);   // pins inside the shape
+$client->properties->search(['polygon' => $ring]);      // the same listings, as cards
+```
+
 ### Results, not exceptions
 
 Every call returns an `ApiResponse`. Nothing throws — an unreachable API and a
