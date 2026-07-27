@@ -90,6 +90,74 @@ class ResourcesTest extends TestCase
         $this->assertSame('my-own-key', $transport->lastRequest()->headers['Idempotency-Key']);
     }
 
+    public function test_search_map_asks_the_search_endpoint_for_map_mode(): void
+    {
+        [$client, $transport] = $this->clientWith([
+            'GET /v1/properties/search' => $this->fixture('properties.search.map'),
+        ]);
+
+        $client->properties->searchMap(['transaction' => 'sale', 'id_city' => 7]);
+
+        $request = $transport->lastRequest();
+        $this->assertSame('https://api.example.test/v1/properties/search', $request->url);
+        $this->assertSame(1, $request->query['map']);
+        $this->assertSame('sale', $request->query['transaction']);
+        $this->assertSame(7, $request->query['id_city']);
+    }
+
+    /** Map mode is the method's whole purpose; a filter cannot cancel it. */
+    public function test_search_map_cannot_be_switched_off_by_a_filter(): void
+    {
+        [$client, $transport] = $this->clientWith([
+            'GET /v1/properties/search' => $this->fixture('properties.search.map'),
+        ]);
+
+        $client->properties->searchMap(['map' => 0]);
+
+        $this->assertSame(1, $transport->lastRequest()->query['map']);
+    }
+
+    /**
+     * Markers are a different shape from search rows, and the difference is
+     * the whole reason searchMap() exists: coordinates to plot, one image,
+     * and cap metadata instead of pages.
+     */
+    public function test_a_map_response_carries_coordinates_and_cap_metadata(): void
+    {
+        [$client] = $this->clientWith([
+            'GET /v1/properties/search' => $this->fixture('properties.search.map'),
+        ]);
+
+        $response = $client->properties->searchMap();
+        $markers = $response->data();
+
+        $this->assertSame(7.8904, $markers[0]['latitude']);
+        $this->assertSame(98.2974, $markers[0]['longitude']);
+        $this->assertSame('villa-alpha.jpg', $markers[0]['image']['filename']);
+        $this->assertNull($markers[1]['image'], 'a listing with no photo still plots');
+
+        $meta = $response->meta();
+        $this->assertTrue($meta['capped']);
+        $this->assertSame(1000, $meta['cap']);
+        $this->assertSame(1200, $meta['total']);
+        $this->assertArrayNotHasKey('last_page', $meta, 'a map has no pages');
+        $this->assertSame([[7.7, 98.2], [8.2, 98.5]], $meta['bounds']);
+    }
+
+    public function test_a_polygon_is_a_filter_on_the_ordinary_paged_search_too(): void
+    {
+        [$client, $transport] = $this->clientWith([
+            'GET /v1/properties/search' => $this->fixture('properties.search'),
+        ]);
+
+        $ring = json_encode([[98.29, 7.88], [98.31, 7.88], [98.31, 7.90], [98.29, 7.88]]);
+        $client->properties->search(['polygon' => $ring]);
+
+        $request = $transport->lastRequest();
+        $this->assertSame($ring, $request->query['polygon']);
+        $this->assertArrayNotHasKey('map', $request->query);
+    }
+
     public function test_a_taken_date_range_comes_back_as_a_conflict(): void
     {
         [$client] = $this->clientWith([
